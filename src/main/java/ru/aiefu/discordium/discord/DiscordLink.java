@@ -29,7 +29,6 @@ import ru.aiefu.discordium.OnPlayerMessageEvent;
 import ru.aiefu.discordium.ProfileLinkCommand;
 import ru.aiefu.discordium.config.ConfigManager;
 import ru.aiefu.discordium.config.LinkedProfile;
-import ru.aiefu.discordium.integraton.LightChatIntegration;
 import ru.aiefu.discordium.language.ServerLanguage;
 
 import javax.security.auth.login.LoginException;
@@ -89,11 +88,7 @@ public class DiscordLink implements DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             DiscordLink.server = (DedicatedServer) server;
             sendMessage(chatChannel, DiscordLink.config.startupMsg);
-            if(FabricLoader.getInstance().isModLoaded("lightchat")){
-                new LightChatIntegration().onGlobalMsgSubscribe();
-            } else {
-                OnPlayerMessageEvent.EVENT.register(DiscordLink::onPlayerMessage);
-            }
+            OnPlayerMessageEvent.EVENT.register(DiscordLink::onPlayerMessage);
         });
         ServerTickEvents.START_SERVER_TICK.register(server -> currentTime = System.currentTimeMillis());
         ServerTickEvents.END_SERVER_TICK.register(server -> {

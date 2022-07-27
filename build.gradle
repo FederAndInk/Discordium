@@ -11,6 +11,10 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
+	maven {
+		url 'https://repo.maven.apache.org/maven2'
+		name 'Maven Central'
+	}
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
@@ -26,7 +30,6 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation files ("libs/light-chat-1.1+1.18.1.jar")
 	include "com.konghq:unirest-java:3.13.4:standalone"
 	include(modImplementation ("net.dv8tion:JDA:5.0.0-alpha.1") {
 		exclude module: 'opus-java'
