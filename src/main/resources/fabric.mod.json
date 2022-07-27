@@ -6,11 +6,12 @@
   "name": "Discord Chat Forwarding",
   "description": "Minecraft-Discord chat bridge and more!",
   "authors": [
-    "Aiefu"
+    "Aiefu",
+    "FederAndInk"
   ],
   "contact": {
     "homepage": "",
-    "sources": "https://github.com/CmdrJane/Discord-chat-forwarding"
+    "sources": "https://github.com/FederAndInk/Discordium"
   },
 
   "license": "GPL-v3",

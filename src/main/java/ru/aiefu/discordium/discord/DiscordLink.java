@@ -1,19 +1,38 @@
 package ru.aiefu.discordium.discord;
 
+import java.awt.Color;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.security.auth.login.LoginException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+
 import kong.unirest.Unirest;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.advancements.Advancement;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.BaseComponent;
@@ -21,8 +40,6 @@ import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.level.ServerPlayer;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import ru.aiefu.discordium.ConsoleFilter;
 import ru.aiefu.discordium.DiscordiumCommands;
 import ru.aiefu.discordium.OnPlayerMessageEvent;
@@ -30,16 +47,6 @@ import ru.aiefu.discordium.ProfileLinkCommand;
 import ru.aiefu.discordium.config.ConfigManager;
 import ru.aiefu.discordium.config.LinkedProfile;
 import ru.aiefu.discordium.language.ServerLanguage;
-
-import javax.security.auth.login.LoginException;
-import java.awt.*;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class DiscordLink implements DedicatedServerModInitializer {
     public static JDA jda;
@@ -96,12 +103,14 @@ public class DiscordLink implements DedicatedServerModInitializer {
             if(tickCount % 6000 == 0){
                 DiscordLink.setTopic(server.getPlayerCount(), server.getMaxPlayers());
             }
-            if(tickCount % 1200 == 0){
-                for(Map.Entry<Integer, VerificationData> e : pendingPlayers.entrySet()){
+            if (tickCount % 1200 == 0) {
+                var it = pendingPlayers.entrySet().iterator();
+                while(it.hasNext()){
+                    var e = it.next();
                     VerificationData data = e.getValue();
                     if(currentTime > data.validUntil()){
                         pendingPlayersUUID.remove(data.uuid());
-                        pendingPlayers.remove(e.getKey());
+                        it.remove();
                     }
                 }
             }
