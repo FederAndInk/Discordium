@@ -153,9 +153,31 @@ public class DiscordLink implements DedicatedServerModInitializer {
         }
     }
 
-    public static void postChatMessage(BaseComponent component){
-        if(chatChannel != null && !stopped){
+    public static void postChatMessage(BaseComponent component) {
+        if (chatChannel != null && !stopped) {
             sendMessage(chatChannel, component.getString());
+        }
+    }
+
+    private static String discordNameIfEnabled(String uuid) {
+        if (config.enableAccountLinking && guild != null && config.useDiscordData) {
+            LinkedProfile profile = linkedPlayers.get(uuid);
+            if (profile != null) {
+                Member m = guild.getMemberById(profile.discordId);
+                if (m != null) {
+                    return m.getEffectiveName();
+                }
+            }
+        }
+        return "";
+    }
+    
+    private static String playerAndDiscordNames(String mcname, String uuid) {
+        String dname = discordNameIfEnabled(uuid);
+        if (dname.isEmpty() || dname.equals(mcname)) {
+            return mcname;
+        } else {
+            return mcname + " (" + dname + ")";
         }
     }
 
@@ -166,17 +188,7 @@ public class DiscordLink implements DedicatedServerModInitializer {
         if(config.enableWebhook){
             String uuid = player.getStringUUID();
             String name = player.getScoreboardName();
-            if(config.enableAccountLinking && guild != null && config.useDiscordData){
-                LinkedProfile profile = linkedPlayers.get(uuid);
-                if(profile != null){
-                    Member m = guild.getMemberById(profile.discordId);
-                    if(m != null) {
-                        postWebHookMsg(msg, m.getEffectiveName(), m.getEffectiveAvatarUrl());
-                        return;
-                    }
-                }
-            }
-            postWebHookMsg(msg, name, getPlayerIconUrl(name, uuid));
+            postWebHookMsg(msg, playerAndDiscordNames(name, uuid), getPlayerIconUrl(name, uuid));
         } else {
             postChatMessage(textComponent);
         }
@@ -215,21 +227,24 @@ public class DiscordLink implements DedicatedServerModInitializer {
 
     public static void greetingMsg(String username, String uuid){
         EmbedBuilder e = new EmbedBuilder();
-        e.setAuthor(config.joinMessage.replaceAll("\\{username}", username), null, getPlayerIconUrl(username, uuid));
+        e.setAuthor(config.joinMessage.replaceAll("\\{username}",
+                playerAndDiscordNames(username, uuid)), null, getPlayerIconUrl(username, uuid));
         e.setColor(Color.GREEN);
         sendEmbed(chatChannel, e.build());
     }
 
     public static void logoutMsg(String username, String uuid){
         EmbedBuilder e = new EmbedBuilder();
-        e.setAuthor(config.disconnectMessage.replaceAll("\\{username}", username), null, getPlayerIconUrl(username, uuid));
+        e.setAuthor(config.disconnectMessage.replaceAll("\\{username}", 
+                playerAndDiscordNames(username, uuid)), null, getPlayerIconUrl(username, uuid));
         e.setColor(Color.RED);
         sendEmbed(chatChannel, e.build());
     }
 
     public static void sendAdvancement(String username, Advancement adv, String uuid){
         EmbedBuilder e = new EmbedBuilder();
-        e.setAuthor(String.format(Language.getInstance().getOrDefault("chat.type.advancement." + adv.getDisplay().getFrame().getName()), username, adv.getDisplay().getTitle().getString()), null, getPlayerIconUrl(username, uuid));
+        e.setAuthor(String.format(Language.getInstance().getOrDefault("chat.type.advancement." + adv.getDisplay().getFrame().getName()), 
+                playerAndDiscordNames(username, uuid), adv.getDisplay().getTitle().getString()), null, getPlayerIconUrl(username, uuid));
         if(config.appendAdvancementDescription){
             e.setDescription(String.format("** %s **", adv.getDisplay().getDescription().getString()));
         }
@@ -239,7 +254,7 @@ public class DiscordLink implements DedicatedServerModInitializer {
 
     public static void sendDeathMsg(String username, String msg, String uuid){
         EmbedBuilder e = new EmbedBuilder();
-        e.setAuthor(msg, null, getPlayerIconUrl(username, uuid));
+        e.setAuthor(msg.replace(username, playerAndDiscordNames(username, uuid)), null, getPlayerIconUrl(username, uuid));
         e.setColor(Color.RED);
         sendEmbed(chatChannel, e.build());
     }
