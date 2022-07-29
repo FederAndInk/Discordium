@@ -30,7 +30,7 @@ public class DiscordConfig {
     public String noPlayersMsg = "Currently there are no players on server";
     public String channelTopicMsg = "Players online: ";
     public String shutdownTopicMsg = "Server offline";
-    public String verificationDisconnect = "You need to verify your account via discord. Your code is {code}. Send this code to {botname} PM.";
+    public String verificationDisconnect = "You need to verify your account via discord. Your code is {code}. Join {{https://discord.gg/YOURLINK}} and send this code in PM to {botname}.";
     public String successfulVerificationMsg = "Successfully linked discord account to your game account {username}({uuid})";
     public String commandLinkMsg = "Your code is {code}. Send this code to {botname} PM.";
     public String alreadyLinked = "Game account {username} is already linked to {discordname}";
@@ -41,8 +41,6 @@ public class DiscordConfig {
 
     public int config_version = 1;
 
-    public transient String vDisconnectMsg1;
-    public transient String vDisconnectMsg2 = "";
     public transient String cLinkMsg1;
     public transient String cLinkMsg2 = "";
 
@@ -53,12 +51,5 @@ public class DiscordConfig {
             cLinkMsg1 = msg.substring(0, i);
             cLinkMsg2 = msg.substring(i +6);
         } else cLinkMsg1 = msg;
-
-        String msg2 = verificationDisconnect;
-        int j = msg2.indexOf("{code}");
-        if(j != -1){
-            vDisconnectMsg1 = msg2.substring(0, j);
-            vDisconnectMsg2 = msg2.substring(j +6);
-        } else vDisconnectMsg1 = msg2;
     }
 }

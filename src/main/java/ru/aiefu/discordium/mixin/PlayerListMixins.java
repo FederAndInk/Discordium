@@ -1,10 +1,8 @@
 package ru.aiefu.discordium.mixin;
 
 import com.mojang.authlib.GameProfile;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,6 +10,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import ru.aiefu.discordium.DisconnectMsgBuilder;
 import ru.aiefu.discordium.config.ConfigManager;
 import ru.aiefu.discordium.config.LinkedProfile;
 import ru.aiefu.discordium.discord.DiscordConfig;
@@ -55,7 +55,8 @@ public class PlayerListMixins {
                 DiscordLink.linkedPlayersByDiscordId.put(profile.discordId, gameProfile.getName());
             }
         }
-        if(cfg.enableAccountLinking && cfg.forceLinking && profile == null){
+        if (cfg.enableAccountLinking && cfg.forceLinking && profile == null) {
+            DiscordLink.logger.info(gameProfile.getName() + " needs to link");
             if(!DiscordLink.pendingPlayersUUID.containsKey(uuid)) {
                 int authCode = r.nextInt(100_000, 1_000_000);
                 while (DiscordLink.pendingPlayers.containsKey(authCode)) {
@@ -64,13 +65,9 @@ public class PlayerListMixins {
                 String auth = String.valueOf(authCode);
                 DiscordLink.pendingPlayers.put(authCode, new VerificationData(gameProfile.getName(), uuid, DiscordLink.currentTime + 600_000));
                 DiscordLink.pendingPlayersUUID.put(uuid, authCode);
-                cir.setReturnValue(new TextComponent(cfg.vDisconnectMsg1.replaceAll("\\{botname}", DiscordLink.botName))
-                        .append(new TextComponent(auth).withStyle(style -> style.withColor(ChatFormatting.GREEN)))
-                        .append(new TextComponent(cfg.vDisconnectMsg2.replaceAll("\\{botname}", DiscordLink.botName)).withStyle(ChatFormatting.WHITE)));
+                DisconnectMsgBuilder.setVerificationDisconnectMsg(cir, auth);
             } else {
-                cir.setReturnValue(new TextComponent(cfg.vDisconnectMsg1.replaceAll("\\{botname}", DiscordLink.botName))
-                        .append(new TextComponent(" " + DiscordLink.pendingPlayersUUID.get(uuid)).withStyle(style -> style.withColor(ChatFormatting.GREEN)))
-                        .append(new TextComponent(cfg.vDisconnectMsg2.replaceAll("\\{botname}", DiscordLink.botName)).withStyle(ChatFormatting.WHITE)));
+                DisconnectMsgBuilder.setVerificationDisconnectMsg(cir, DiscordLink.pendingPlayersUUID.get(uuid).toString());
             }
         }
     }
