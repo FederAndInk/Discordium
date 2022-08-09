@@ -23,11 +23,14 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ServerLanguage extends Language {
     private Map<String, String> storage;
@@ -49,7 +52,7 @@ public class ServerLanguage extends Language {
         excludeModIDs.add("fabric-networking-v0");
     }
 
-    public void loadAllLanguagesIncludingModded(String languageKey, boolean bl){
+    public void loadAllLanguagesIncludingModded(String languageKey, boolean bl) {
         this.isBidirectional = bl;
         HashMap<String, String> languageKeys = new HashMap<>();
         try {
@@ -58,30 +61,24 @@ public class ServerLanguage extends Language {
             e.printStackTrace();
         }
         Collection<ModContainer> mods = FabricLoader.getInstance().getAllMods();
-        if(!mods.isEmpty()){
-            for (ModContainer c : mods){
+        if (!mods.isEmpty()) {
+            for (ModContainer c : mods) {
                 ModMetadata meta = c.getMetadata();
-                if(meta instanceof LoaderModMetadata loaderModMetadata && !excludeModIDs.contains(meta.getId())){
-                    EntrypointMetadata data = loaderModMetadata.getEntrypoints("main").stream().findFirst().orElse(null);
-                    if(data != null) {
+                if (meta instanceof LoaderModMetadata loaderModMetadata && !excludeModIDs.contains(meta.getId())) {
+                    EntrypointMetadata data = loaderModMetadata.getEntrypoints("main").stream().findFirst()
+                            .orElse(null);
+                    if (data != null) {
                         try {
-                            String locale = languageKey;
                             Class<?> modClass = FabricLauncherBase.getClass(data.getValue());
-                            InputStream inputStream = modClass.getResourceAsStream(String.format("/assets/%s/lang/%s.json", meta.getId(), languageKey));
-                            if (inputStream == null) {
-                                inputStream = modClass.getResourceAsStream(String.format("/assets/%s/lang/en_us.json", meta.getId()));
-                                logger.info(String.format("Failed to load language %s for mod %s, trying to load default en_us locale", languageKey, meta.getName()));
-                                locale = "en_us(fallback)";
+                            if (!tryLoadModLang(meta.getId(), languageKey, languageKeys, meta, modClass)) {
+                                Set<String> assetsSubDirs = getAssetsSubDirs(c);
+                                assetsSubDirs.remove(meta.getId());
+                                var it = assetsSubDirs.iterator();
+                                while (it.hasNext()
+                                        && !tryLoadModLang(it.next(), languageKey, languageKeys, meta, modClass)) {
+                                }
                             }
-                            if (inputStream != null) {
-                                loadFromJson(inputStream, languageKeys::put);
-                                logger.info(String.format("Loaded language %s for mod %s", locale, meta.getName()));
-                                inputStream.close();
-                            } else
-                                logger.error(String.format("Failed to load default en_us locale for mod %s", meta.getName()));
-                        } catch (ClassNotFoundException ignored) {}
-                        catch (IOException e){
-                            e.printStackTrace();
+                        } catch (ClassNotFoundException ignored) {
                         }
                     }
                 }
@@ -89,6 +86,52 @@ public class ServerLanguage extends Language {
         }
         this.storage = languageKeys;
         inject(this);
+    }
+
+    private Set<String> getAssetsSubDirs(ModContainer c) {
+        var assetsOpt = c.findPath("/assets");
+        if (assetsOpt.isPresent()) {
+            logger.info("/assets present in {}", c.getMetadata().getName());
+            try (var stream = Files.list(assetsOpt.get())) {
+                return stream
+                        .map(Path::getFileName)
+                        .map(Path::toString)
+                        .collect(Collectors.toSet());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            logger.info("No /assets directory in mod {}", c.getMetadata().getName());
+        }
+        return Set.of();
+    }
+
+    private boolean tryLoadModLang(String dir, String languageKey, HashMap<String, String> languageKeys,
+            ModMetadata meta, Class<?> modClass) {
+        try {
+            String locale = languageKey;
+            InputStream inputStream = modClass
+                    .getResourceAsStream(String.format("/assets/%s/lang/%s.json", dir, languageKey));
+            if (inputStream == null && !languageKey.equals("en_us")) {
+                inputStream = modClass.getResourceAsStream(String.format("/assets/%s/lang/en_us.json", dir));
+                logger.info(
+                        "Failed to load language {} for mod {} (id: {}) from dir {}, trying to load default en_us locale",
+                        languageKey, meta.getName(), meta.getId(), dir);
+                locale = "en_us(fallback)";
+            }
+            if (inputStream != null) {
+                loadFromJson(inputStream, languageKeys::put);
+                logger.info("Loaded language {} for mod {} from dir {}", locale, meta.getName(), dir);
+                inputStream.close();
+                return true;
+            } else {
+                logger.info("Failed to load default en_us locale for mod {}(id: {}) from dir {}", meta.getName(),
+                        meta.getId(), dir);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     private void loadMinecraftLanguage(String languageKey, HashMap<String, String> languageKeys) throws IOException {
