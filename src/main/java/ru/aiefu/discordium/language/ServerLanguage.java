@@ -39,6 +39,7 @@ public class ServerLanguage extends Language {
     private static final HashSet<String> excludeModIDs = new HashSet<>();
 
     public ServerLanguage(){
+        excludeModIDs.add("discordium");
         excludeModIDs.add("fabric-api-lookup-api-v1");
         excludeModIDs.add("fabric-events-interaction-v0");
         excludeModIDs.add("confabricate");
