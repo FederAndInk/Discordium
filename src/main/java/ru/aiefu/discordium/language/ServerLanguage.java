@@ -66,6 +66,7 @@ public class ServerLanguage extends Language {
                 ModMetadata meta = c.getMetadata();
                 if (meta instanceof LoaderModMetadata loaderModMetadata && !excludeModIDs.contains(meta.getId())) {
                     EntrypointMetadata data = loaderModMetadata.getEntrypoints("main").stream().findFirst()
+                            .or(() -> loaderModMetadata.getEntrypoints("server").stream().findFirst())
                             .orElse(null);
                     if (data != null) {
                         try {
