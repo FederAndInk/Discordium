@@ -166,6 +166,8 @@ public class DiscordLink implements DedicatedServerModInitializer {
                 Member m = guild.getMemberById(profile.discordId);
                 if (m != null) {
                     return m.getEffectiveName();
+                } else {
+                    logger.warn("discord member {} not found", profile.discordId);
                 }
             }
         }

@@ -1,8 +1,13 @@
 package ru.aiefu.discordium.mixin;
 
 import com.mojang.authlib.GameProfile;
+
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import org.spongepowered.asm.mixin.Mixin;
@@ -48,26 +53,47 @@ public class PlayerListMixins {
         DiscordConfig cfg = DiscordLink.config;
         String uuid = gameProfile.getId().toString();
         LinkedProfile profile = null;
-        if(cfg.enableAccountLinking) {
+        if (cfg.enableAccountLinking) {
             profile = ConfigManager.getLinkedProfile(uuid);
             if (profile != null) {
                 DiscordLink.linkedPlayers.put(uuid, profile);
                 DiscordLink.linkedPlayersByDiscordId.put(profile.discordId, gameProfile.getName());
             }
         }
-        if (cfg.enableAccountLinking && cfg.forceLinking && profile == null) {
-            DiscordLink.logger.info(gameProfile.getName() + " needs to link");
-            if(!DiscordLink.pendingPlayersUUID.containsKey(uuid)) {
-                int authCode = r.nextInt(100_000, 1_000_000);
-                while (DiscordLink.pendingPlayers.containsKey(authCode)) {
-                    authCode = r.nextInt(100_000, 1_000_000);
+        if (cfg.enableAccountLinking && cfg.forceLinking) {
+            if (profile == null) {
+                DiscordLink.logger.info(gameProfile.getName() + " needs to link");
+                if (!DiscordLink.pendingPlayersUUID.containsKey(uuid)) {
+                    int authCode = r.nextInt(100_000, 1_000_000);
+                    while (DiscordLink.pendingPlayers.containsKey(authCode)) {
+                        authCode = r.nextInt(100_000, 1_000_000);
+                    }
+                    String auth = String.valueOf(authCode);
+                    DiscordLink.pendingPlayers.put(authCode,
+                            new VerificationData(gameProfile.getName(), uuid, DiscordLink.currentTime + 600_000));
+                    DiscordLink.pendingPlayersUUID.put(uuid, authCode);
+                    DisconnectMsgBuilder.setVerificationDisconnectMsg(cir, auth);
+                } else {
+                    DisconnectMsgBuilder.setVerificationDisconnectMsg(cir,
+                            DiscordLink.pendingPlayersUUID.get(uuid).toString());
                 }
-                String auth = String.valueOf(authCode);
-                DiscordLink.pendingPlayers.put(authCode, new VerificationData(gameProfile.getName(), uuid, DiscordLink.currentTime + 600_000));
-                DiscordLink.pendingPlayersUUID.put(uuid, authCode);
-                DisconnectMsgBuilder.setVerificationDisconnectMsg(cir, auth);
-            } else {
-                DisconnectMsgBuilder.setVerificationDisconnectMsg(cir, DiscordLink.pendingPlayersUUID.get(uuid).toString());
+            } else if (cfg.requireMemberOnDiscordServer) {
+                Member m = null;
+                try {
+                    m = DiscordLink.guild.retrieveMemberById(profile.discordId).complete();
+                } catch (ErrorResponseException e) {
+                    DiscordLink.logger.info("{} is linked({}) but not found on the discord server: {}", profile.name,
+                            profile.discordId,
+                            e.getMessage());
+                }
+                if (m == null) {
+                    DiscordLink.logger.info(gameProfile.getName() + " is not on the discord server");
+                    var msgComp = new TextComponent(cfg.notOnDiscordServer);
+                    cir.setReturnValue(msgComp.withStyle(ChatFormatting.WHITE));
+                } else {
+                    DiscordLink.logger.info("{} is linked({}) and on the discord server", profile.name,
+                            profile.discordId);
+                }
             }
         }
     }
