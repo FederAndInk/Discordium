@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import javax.security.auth.login.LoginException;
 
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -42,6 +41,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
 import ru.aiefu.discordium.ConsoleFilter;
 import ru.aiefu.discordium.DiscordiumCommands;
+import ru.aiefu.discordium.DiscordiumLogger;
 import ru.aiefu.discordium.OnPlayerMessageEvent;
 import ru.aiefu.discordium.ProfileLinkCommand;
 import ru.aiefu.discordium.config.ConfigManager;
@@ -54,7 +54,7 @@ public class DiscordLink implements DedicatedServerModInitializer {
     public static TextChannel consoleChannel;
     public static DiscordConfig config;
     public static DedicatedServer server;
-    public static Logger logger = LogManager.getLogger("Discordium");
+    public static DiscordiumLogger logger = new DiscordiumLogger();
 
     public static HashMap<String, LinkedProfile> linkedPlayers = new HashMap<>();
     public static HashMap<String, String> linkedPlayersByDiscordId = new HashMap<>();

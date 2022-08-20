@@ -94,8 +94,10 @@ public class ConsoleFilter implements Filter {
         String logName = event.getLoggerName();
         int i = logName.lastIndexOf('.');
         if(i != -1)
-        logName = logName.substring(i + 1);
-        String sb = String.format("[%s] [%s] [%s]: %s", formatter.format(event.getTimeMillis()), logName, event.getLevel(), event.getMessage().getFormattedMessage());
+            logName = logName.substring(i + 1);
+        String msg = event.getMessage().getFormattedMessage();
+        msg = msg.replaceFirst("^\\[" + logName + "\\] ", "");
+        String sb = String.format("[%s] [%s] [%s]: %s", formatter.format(event.getTimeMillis()), logName, event.getLevel(), msg);
         DiscordLink.postConsoleMessage(sb);
         return null;
     }

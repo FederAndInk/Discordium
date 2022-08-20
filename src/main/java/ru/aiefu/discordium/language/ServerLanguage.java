@@ -15,8 +15,9 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.FormattedCharSequence;
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+
+import ru.aiefu.discordium.DiscordiumLogger;
 import ru.aiefu.discordium.discord.DiscordLink;
 
 import java.io.*;
@@ -35,7 +36,7 @@ import java.util.stream.Collectors;
 public class ServerLanguage extends Language {
     private Map<String, String> storage;
     private boolean isBidirectional = false;
-    private static final Logger logger = DiscordLink.logger;
+    private static final DiscordiumLogger logger = DiscordLink.logger;
     private static final HashSet<String> excludeModIDs = new HashSet<>();
 
     public ServerLanguage(){
