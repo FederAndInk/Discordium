@@ -2,8 +2,10 @@ package ru.aiefu.discordium.discord;
 
 import net.dv8tion.jda.api.entities.ChannelType;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -45,6 +47,22 @@ public class DiscordListener extends ListenerAdapter {
                     tryVerify(e, server);
                 } catch (IOException ex) {
                     ex.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    @Override
+    public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
+        super.onGuildMemberRemove(event);
+        if (DiscordLink.config.requireMemberOnDiscordServer) {
+            String name = DiscordLink.linkedPlayersByDiscordId.get(event.getUser().getId());
+            if (name != null) {
+                DiscordLink.logger.info("{}({}) removed from the discord server", event.getUser().getAsTag(),
+                event.getUser().getId());
+                ServerPlayer player = DiscordLink.server.getPlayerList().getPlayerByName(name);
+                if (player != null) {
+                    player.connection.disconnect(new TextComponent(DiscordLink.config.removedFromDiscordServer));
                 }
             }
         }

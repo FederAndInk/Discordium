@@ -33,6 +33,7 @@ public class DiscordConfig {
     public String shutdownTopicMsg = "Server offline";
     public String verificationDisconnect = "You need to verify your account via discord. Your code is {code}. Join {{https://discord.gg/YOURLINK}} and send this code in PM to {botname}.";
     public String notOnDiscordServer = "You need to be on the discord server. Please join https://discord.gg/YOURLINK";
+    public String removedFromDiscordServer = "You are not on the discord server anymore";
     public String successfulVerificationMsg = "Successfully linked discord account to your game account {username}({uuid})";
     public String commandLinkMsg = "Your code is {code}. Send this code to {botname} PM.";
     public String alreadyLinked = "Game account {username} is already linked to {discordname}";
