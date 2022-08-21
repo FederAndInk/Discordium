@@ -49,9 +49,11 @@ import ru.aiefu.discordium.config.LinkedProfile;
 import ru.aiefu.discordium.language.ServerLanguage;
 
 public class DiscordLink implements DedicatedServerModInitializer {
+    public static final String MODID = "discordium";
     public static JDA jda;
     public static TextChannel chatChannel;
     public static TextChannel consoleChannel;
+    public static TextChannel crashChannel;
     public static DiscordConfig config;
     public static DedicatedServer server;
     public static DiscordiumLogger logger = new DiscordiumLogger();
@@ -129,6 +131,9 @@ public class DiscordLink implements DedicatedServerModInitializer {
         botName = jda.getSelfUser().getName();
         chatChannel = jda.getTextChannelById(config.chatChannelId);
         consoleChannel = jda.getTextChannelById(config.consoleChannelId);
+        if (!config.crashChannelId.isEmpty()) {
+            crashChannel = jda.getTextChannelById(config.crashChannelId);
+        }
         String webhookUrl = config.webhookUrl;
         boolean bl = config.enableWebhook;
         if(bl && config.webhookUrl.length() > 0)

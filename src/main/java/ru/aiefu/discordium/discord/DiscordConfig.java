@@ -4,6 +4,7 @@ public class DiscordConfig {
     public String token = "";
     public String chatChannelId = "";
     public String consoleChannelId = "";
+    public String crashChannelId = "";
     public boolean enableLogsForwarding = true;
     public String serverId = "";
     public boolean preloadDiscordMembers = false;
