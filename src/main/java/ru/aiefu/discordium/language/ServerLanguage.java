@@ -75,7 +75,10 @@ public class ServerLanguage extends Language {
                             Class<?> modClass = FabricLauncherBase.getClass(data.getValue());
                             if (!tryLoadModLang(meta.getId(), languageKey, languageKeys, meta, modClass)) {
                                 Set<String> assetsSubDirs = getAssetsSubDirs(c);
-                                assetsSubDirs.remove(meta.getId());
+                                // I hate java, no clean way of checking for immutable
+                                if (!assetsSubDirs.getClass().isInstance(Set.of())) {
+                                    assetsSubDirs.remove(meta.getId());
+                                }
                                 var it = assetsSubDirs.iterator();
                                 while (it.hasNext()
                                         && !tryLoadModLang(it.next(), languageKey, languageKeys, meta, modClass)) {
