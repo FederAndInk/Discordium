@@ -6,9 +6,6 @@ import com.google.gson.reflect.TypeToken;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.metadata.ModMetadata;
-import net.fabricmc.loader.impl.launch.FabricLauncherBase;
-import net.fabricmc.loader.impl.metadata.EntrypointMetadata;
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.minecraft.client.resources.language.FormattedBidiReorder;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.FormattedText;
@@ -24,6 +21,8 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
@@ -63,81 +62,89 @@ public class ServerLanguage extends Language {
             e.printStackTrace();
         }
         Collection<ModContainer> mods = FabricLoader.getInstance().getAllMods();
-        if (!mods.isEmpty()) {
-            for (ModContainer c : mods) {
-                ModMetadata meta = c.getMetadata();
-                if (meta instanceof LoaderModMetadata loaderModMetadata && !excludeModIDs.contains(meta.getId())) {
-                    EntrypointMetadata data = loaderModMetadata.getEntrypoints("main").stream().findFirst()
-                            .or(() -> loaderModMetadata.getEntrypoints("server").stream().findFirst())
-                            .orElse(null);
-                    if (data != null) {
-                        try {
-                            Class<?> modClass = FabricLauncherBase.getClass(data.getValue());
-                            if (!tryLoadModLang(meta.getId(), languageKey, languageKeys, meta, modClass)) {
-                                Set<String> assetsSubDirs = getAssetsSubDirs(c);
-                                // I hate java, no clean way of checking for immutable
-                                if (!assetsSubDirs.getClass().isInstance(Set.of())) {
-                                    assetsSubDirs.remove(meta.getId());
-                                }
-                                var it = assetsSubDirs.iterator();
-                                while (it.hasNext()
-                                        && !tryLoadModLang(it.next(), languageKey, languageKeys, meta, modClass)) {
-                                }
-                            }
-                        } catch (ClassNotFoundException ignored) {
-                        }
-                    }
-                }
-            }
-        }
+        loadMods(mods, languageKey, languageKeys);
         this.storage = languageKeys;
         inject(this);
     }
 
-    private Set<String> getAssetsSubDirs(ModContainer c) {
+    private void loadMods(Collection<ModContainer> mods, String languageKey, HashMap<String, String> languageKeys) {
+        if (mods.isEmpty()) {
+            return;
+        }
+
+        for (ModContainer c : mods) {
+            ModMetadata meta = c.getMetadata();
+            if (excludeModIDs.contains(meta.getId())) {
+                continue;
+            }
+            if (!c.findPath("/assets").isPresent()) {
+                logger.info("No /assets directory in mod {}", c.getMetadata().getId());
+                continue;
+            }
+
+            logger.debug("try loading lang for mod {}", meta.getId());
+            Set<Path> assetsSubDirs = getAssetsSubDirs(c);
+            boolean hasLang = false;
+            for (Path p : assetsSubDirs) {
+                hasLang = tryLoadModLang(p, meta, languageKey, languageKeys) || hasLang;
+            }
+            if (!hasLang) {
+                logger.info("No lang directory in mod {}", c.getMetadata().getId());
+            }
+        }
+    }
+
+    private Set<Path> getAssetsSubDirs(ModContainer c) {
         var assetsOpt = c.findPath("/assets");
         if (assetsOpt.isPresent()) {
-            logger.info("/assets present in {}", c.getMetadata().getName());
+            logger.debug("/assets present in {}", c.getMetadata().getId());
             try (var stream = Files.list(assetsOpt.get())) {
-                return stream
-                        .map(Path::getFileName)
-                        .map(Path::toString)
-                        .collect(Collectors.toSet());
+                return stream.collect(Collectors.toSet());
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else {
-            logger.info("No /assets directory in mod {}", c.getMetadata().getName());
+            logger.debug("No /assets directory in mod {}", c.getMetadata().getId());
         }
         return Set.of();
     }
 
-    private boolean tryLoadModLang(String dir, String languageKey, HashMap<String, String> languageKeys,
-            ModMetadata meta, Class<?> modClass) {
+    private boolean tryLoadModLang(Path p, ModMetadata meta, String languageKey,
+            HashMap<String, String> languageKeys) {
         try {
             String locale = languageKey;
-            InputStream inputStream = modClass
-                    .getResourceAsStream(String.format("/assets/%s/lang/%s.json", dir, languageKey));
+            InputStream inputStream = openOrNull(p, "lang/%s.json".formatted(languageKey));
             if (inputStream == null && !languageKey.equals("en_us")) {
-                inputStream = modClass.getResourceAsStream(String.format("/assets/%s/lang/en_us.json", dir));
-                logger.info(
-                        "Failed to load language {} for mod {} (id: {}) from dir {}, trying to load default en_us locale",
-                        languageKey, meta.getName(), meta.getId(), dir);
+                logger.debug(
+                    "Failed to load language {} for mod {} (id: {}) from dir {}, trying to load default en_us locale",
+                    meta, meta.getName(), meta.getId(), p);
+                inputStream = openOrNull(p, "lang/en_us.json");
                 locale = "en_us(fallback)";
             }
             if (inputStream != null) {
                 loadFromJson(inputStream, languageKeys::put);
-                logger.info("Loaded language {} for mod {} from dir {}", locale, meta.getName(), dir);
+                logger.info("Loaded language {} for mod {} from dir {}", locale, meta.getId(), p);
                 inputStream.close();
                 return true;
             } else {
-                logger.info("Failed to load default en_us locale for mod {}(id: {}) from dir {}", meta.getName(),
-                        meta.getId(), dir);
+                logger.debug("Failed to load default en_us locale for mod {}(id: {}) from dir {}", meta.getName(),
+                        meta.getId(), p);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return false;
+    }
+
+    private InputStream openOrNull(Path p, String other) throws IOException {
+        try {
+            Path pLang = p.resolve(other);
+            return Files.newInputStream(pLang);
+        } catch (InvalidPathException e) {
+            e.printStackTrace();
+        } catch (NoSuchFileException ignored) {
+        }
+        return null;
     }
 
     private void loadMinecraftLanguage(String languageKey, HashMap<String, String> languageKeys) throws IOException {
